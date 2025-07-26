@@ -12,3 +12,4 @@ de una API RESTful.
 - **Fastify** para la construcción de la API.
 - **Jest** para el testing.
 - **Fastify/swagger** para la documentación de swagger.# rmb-api
+# rmb-api
