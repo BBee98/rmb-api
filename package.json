@@ -10,7 +10,9 @@
   "license": "ISC",
   "devDependencies": {
     "@fastify/swagger": "^9.5.1",
+    "ejs": "^3.1.10",
     "jest": "^30.0.5",
+    "nodemailer": "^7.0.5",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3"
   },

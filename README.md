@@ -12,3 +12,5 @@ de una API RESTful.
 - **Fastify** para la construcción de la API.
 - **Jest** para el testing.
 - **Fastify/swagger** para la documentación de swagger
+- **EJS** para crear templates en el backend
+- **Nodemailer** para enviar emails
