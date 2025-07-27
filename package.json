@@ -2,13 +2,17 @@
   "name": "rmb-server",
   "version": "0.0.0",
   "description": "\"RESTful API for rate my business backoffice\"",
-  "main": "main.ts",
+  "main": "src/main.ts",
   "scripts": {
-    "test": "test"
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsup-node src/main.ts dist/main.js --minify",
+    "test": "test",
+    "start": "npm run build && node dist/main.js"
   },
   "author": "BBee98",
   "license": "ISC",
   "devDependencies": {
+    "@fastify/cors": "^11.0.1",
     "@fastify/swagger": "^9.5.1",
     "ejs": "^3.1.10",
     "jest": "^30.0.5",
