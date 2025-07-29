@@ -1,11 +1,11 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors'
 
-const server = Fastify({
+export const server = Fastify({
     logger: true
 });
 
-server.register(cors)
+server.register(cors);
 
 export function Serve(){
     server.listen({port: 1357}, (err) => {
