@@ -14,6 +14,8 @@
   "devDependencies": {
     "@fastify/cors": "^11.0.1",
     "@fastify/swagger": "^9.5.1",
+    "@types/nodemailer": "^6.4.17",
+    "dotenv": "^17.2.1",
     "handlebars": "^4.7.8",
     "jest": "^30.0.5",
     "nodemailer": "^7.0.5",

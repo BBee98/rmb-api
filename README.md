@@ -170,4 +170,224 @@ Si ahora hacemos la llamada desde **POSTMAN** o cualquier otro servicio:
 
 Deberíamos recibir correctamente el ``reply`` que programamos en la ruta.
 
+## 3.2 Configurando el email
 
+Vamos a hacer que cuando envíes una petición a esta ruta, se envíe un correo electrónico. 
+
+- Lo primero es reorganizar un poco el código. Vamos a hacer un directorio nuevo llamado `email` con la siguiente estructura:
+
+````
+src/
+└── core/
+    └── app.ts
+    └── routes.ts
+└── form/
+    └── template.ts
+└── email/
+    └── routes/
+       └── routes.ts
+````
+
+- Creamos una carpeta ``routes`` dentro de la carpeta `email`, con el fichero ``routes.ts`` dentro. Con esto vamos a preparar 
+nuestro código para un paso posterior que tengamos que hacer.
+
+- Pasamos el código de ``form/routes.ts``
+
+````
+import {FastifyInstance} from "fastify";
+
+export const RoutePostEmail = (server: FastifyInstance) => {
+    server.post('/email', {}, async (request, reply) => {
+        reply.send({message: 'ok'})
+    })
+}
+````
+
+Al fichero ``routes.ts`` creado dentro del directorio ``routes``.
+
+- Ahora, necesitamos instalar el paquete de los tipos de ``nodemailer`` para poder usarlo
+adecuadamente con nuestro proyecto (que está en ``typescript``):
+
+```
+⚙️  npm i --save-dev @types/nodemailer
+```
+
+Y ahora podemos crear el método con el que enviaremos el correo: 
+
+```typescript
+function SendEmail(){
+    const transporter = createTransport({
+        host: "smtp.ethereal.email",
+        port: 587,
+        secure: false, // true for 465, false for other ports
+        auth: {
+            user: "maddison53@ethereal.email",
+            pass: "jn7jnAPss4f63QBp6D",
+        },
+    });
+}
+```
+
+Si miramos la documentación oficial:
+
+```
+🌏 https://nodemailer.com/#example-using-an-ethereal-test-account
+```
+
+Vemos que usan el siguiente ejemplo:
+
+````javascript
+const transporter = nodemailer.createTransport({
+  host: "",
+  port: 587,
+  secure: false, // true for 465, false for other ports
+  auth: {
+    user: "maddison53@ethereal.email",
+    pass: "jn7jnAPss4f63QBp6D",
+  },
+});
+````
+
+El método ``createTransport`` es el que nos permite "crear el canal" por donde enviar el correo.
+
+En el campo ``host`` se utiliza el valor ``"smtp.ethereal.email"``, que es un host de prueba para desarrolladores.
+Dependiendo del servicio que utilicemos, debemos utilizar los siguientes valores:
+
+| Servicio | Host | Puertos | Seguridad |
+|----------|------|---------|------------|
+| Gmail | smtp.gmail.com | 587, 465 | TLS/SSL |
+| Outlook/Hotmail | smtp.office365.com | 587 | TLS |
+| Yahoo | smtp.mail.yahoo.com | 587, 465 | TLS/SSL |
+| AOL | smtp.aol.com | 587 | TLS |
+| SendGrid | smtp.sendgrid.net | 587 | TLS |
+| Amazon SES | email-smtp.[región].amazonaws.com | 587, 465 | TLS/SSL |
+| Mailgun | smtp.mailgun.org | 587 | TLS |
+| Brevo (SendinBlue) | smtp-relay.sendinblue.com | 587 | TLS |
+| Mailtrap (desarrollo) | smtp.mailtrap.io | 2525, 587 | TLS |
+| Ethereal (pruebas) | smtp.ethereal.email | 587 | TLS |
+| ProtonMail | smtp.proton.me | 587, 465 | TLS/SSL |
+| Zoho Mail | smtp.zoho.com | 587, 465 | TLS/SSL |
+
+Dependiendo del servicio que utilicemos, las propiedades de ``port`` y ``secure`` deberán de tener
+un valor u otro (consultar **para cada servicio**)
+
+
+En el apartado de `auth` nos piden el **usuario** y la **contraseña**. El campo `user` corresponde a la **dirección de correo** que envía el email:
+
+> Ejemplo: mi.correo@hotmail.com
+
+La `pass`, a la contraseña del correo. Para estos casos, está **altamente recomendado no utilizar
+la password real asociada a ese correo**. Lo ideal es **crear una contraseña de aplicación**
+
+Entra en el siguiente enlace:
+
+> https://support.google.com/mail/answer/185833?hl=en
+
+Y haz click en la opción: ``Create and manage your app passwords``.
+
+> Nota: Es importante tener **la verificación en 2 pasos** o si no no podrá hacerse.
+
+A continuación te pedirá **el nombre de la aplicación**. Para este ejemplo pondremos el nombre
+_RateMyBusiness_
+
+Luego aparecerá una ventana donde te indicará que **debes utilizar la contraseña de la aplicación en lugar de tu contraseña original desde la aplicación
+que estés planeando utilizarla. NO** debes de cambiar tu contraseña original por la de la aplicación.
+
+> ¿Por qué? ¿Qué ventajas tiene utilizar una contraseña de aplicación?
+> 
+> Huelga decir que **solo debe de hacerse este cambio cuando se pretenda que la cuenta de correo de Google sea utilizada por servicios de terceros**.
+> 
+> Las ventajas que ofrece este uso son:
+> 1. Evitar que tu **contraseña original** quede expuesta. En nuestra api, en la parte de la contraseña asociada a la cuenta de correo, podremos utilizar la
+> nueva contraseña creada, evitando así exponer la otra innecesariamente.
+> 
+> 2. Además, te permite añadir otros aspectos relacionados con la seguridad, como rastrear qué aplicación usa qué contraseña,
+> cambiarlas, revocar las contraseñas (si en el peor de los casos han sido descubiertas), o utilizar la misma dirección de email pero con múltiples contraseñas
+> de aplicación diferentes.
+> 
+> 3. Otras ventajas es que evita el uso de tokens y de su manejo (tener que refrescarlos), bloqueos por parte de Google y "salta" la 2FA de Google
+> (la salta porque ésta contraseña en sí misma es un paso extra de seguridad).
+> 
+> Como apunte final, recordar que estas contraseñas de aplicación **solo están bien utilizarlas para casos donde necesitemos que una aplicación de terceros**
+
+Así que ahora nuestro código quedaría así:
+
+
+````javascript
+function SendEmail(){
+    const transporter = createTransport({
+        host: process.env.HOST_EMAIL,
+        port: process.env.SECURITY_PORT,
+        secure: process.env.SECURE, // true for 465, false for other ports
+        auth: {
+            user: process.env.HOST_EMAIL,
+            pass: process.env.HOST_EMAIL_PASSWORD,
+        },
+    });
+}
+````
+
+
+Ahora que tenemos el ``transporter`` hecho, podemos **enviar** el email:
+
+````
+async function SendEmail(){
+    const transporter = createTransport({
+        host: process.env.HOST,
+        port: parseInt(process.env.SECURITY_PORT),
+        secure: process.env.SECURE,
+        auth: {
+            user: process.env.HOST_EMAIL,
+            pass: process.env.HOST_EMAIL_PASSWORD,
+        },
+    });
+
+    const info = await transporter.sendMail({
+        from: '"Maddison Foo Koch" <maddison53@ethereal.email>',
+        to: "bar@example.com, baz@example.com",
+        subject: "Hello ✔",
+        text: "Hello world?", // plain‑text body
+        html: "<b>Hello world?</b>", // HTML body
+    });
+}
+````
+
+> 👉 Recuerda que en tu ``.env``, en la variable ``HOST_EMAIL_PASSWORD``, debes utilizar la **contraseña de aplicación** creada por Google, **no** tu contraseña real.
+
+Cambiemos las props de ``from`` y ``to`` para enviarlos a nuestro correo de pruebas.
+
+
+> ‼️Si aparece un mensaje como este:
+> ```
+> {
+    "statusCode": 500,
+    "code": "EDNS",
+    "error": "Internal Server Error",
+    "message": "queryA EBADNAME smtp.gmail.com,"
+}
+> ```
+> 
+> Significa que la propiedad de host dentro del método createTransport está recibiendo mal el valor. Asegúrate de que no le estés pasando 
+> nada como una coma o algo parecido.
+
+> ‼️️ Otro mensaje de error es:
+
+```json
+{
+    "statusCode": 500,
+    "code": "ESOCKET",
+    "error": "Internal Server Error",
+    "message": "009FFBFD01000000:error:0A00010B:SSL routines:ssl3_get_record:wrong version number:../deps/openssl/openssl/ssl/record/ssl3_record.c:355:\n"
+}
+```
+
+> Esto puede ocurrir por varios motivos:
+> 1. _No tienes activada la verificación en dos pasos en tu cuenta de Gmail_. Es necesario activar
+> la verificación en dos pasos para poder utilizar la contraseña de aplicación. Además, debe de hacerse **antes** de 
+> crear la contraseña de aplicación. Si ya la creaste, debes activar la verificación en dos pasos y volver a crear
+> la contraseña de aplicación.
+> 
+> 2. _Tu contraseña original fue cambiada_. En el momento en que creaste la contraseña de aplicación, digamos que se "vincularon" tu
+> contraseña de aplicación con la original. Si has cambiado la contraseña original **después** de generar la contraseña de aplicación, 
+> **debes de volver a generar la contraseña de aplicación** para que funcione.
+>

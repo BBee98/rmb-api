@@ -1,5 +1,5 @@
 import { server } from './app';
-import {RoutePostEmail} from "../form/routes";
+import {RoutePostEmail} from "../email/routes";
 
 
 export const Routes = () => {

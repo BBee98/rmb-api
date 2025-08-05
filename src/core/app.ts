@@ -1,5 +1,10 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors'
+import {config} from "dotenv";
+
+export function ConfigEnvironment(){
+    config();
+}
 
 export const server = Fastify({
     logger: true
