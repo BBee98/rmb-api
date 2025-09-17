@@ -1,8 +1,9 @@
 import {FastifyInstance} from "fastify";
 import { createTransport } from 'nodemailer';
+import {Middleware} from "./middleware";
 
 export const RoutePostEmail = (server: FastifyInstance) => {
-    server.post('/email', {}, async (request, reply) => {
+    server.post('/email', {schema: Middleware.FormBody() }, async (request, reply) => {
         const info = await SendEmail();
         reply.send({message: 'ok', info})
     })

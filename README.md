@@ -357,14 +357,14 @@ async function SendEmail(){
 Cambiemos las props de ``from`` y ``to`` para enviarlos a nuestro correo de pruebas.
 
 
-> ‼️Si aparece un mensaje como este:
+> ‼️ Si aparece un mensaje como este:
 > ```
 > {
-    "statusCode": 500,
-    "code": "EDNS",
-    "error": "Internal Server Error",
-    "message": "queryA EBADNAME smtp.gmail.com,"
-}
+>   "statusCode": 500,
+>   "code": "EDNS",
+>   "error": "Internal Server Error",
+>   "message": "queryA EBADNAME smtp.gmail.com,"
+> }
 > ```
 > 
 > Significa que la propiedad de host dentro del método createTransport está recibiendo mal el valor. Asegúrate de que no le estés pasando 
@@ -391,3 +391,78 @@ Cambiemos las props de ``from`` y ``to`` para enviarlos a nuestro correo de prue
 > contraseña de aplicación con la original. Si has cambiado la contraseña original **después** de generar la contraseña de aplicación, 
 > **debes de volver a generar la contraseña de aplicación** para que funcione.
 >
+
+
+> Más documentación 👉 https://bestsoftware.medium.com/how-to-create-an-app-password-on-gmail-e00eff3af4e0
+
+
+## 3.2 Middleware para la ruta: '/email'.
+
+- Ahora mismo el correo se manda a la dirección por defecto que mandamos: 
+
+
+```
+await transporter.sendMail({
+        from: process.env.TEST_EMAIL_FROM,
+        to: process.env.TEST_EMAIL_TO,
+        subject: "Hello ✔",
+        text: "Hello world?", // plain‑text body
+        html: "<b>Hello world?</b>", // HTML body
+    });
+```
+
+- Así que vamos a crear un ``middleware`` donde comprobemos que los campos con los que queremos
+personalizar los envíos de los emails llegan adecuadamente.
+
+
+````
+src/
+└── email/
+    └── middleware.ts
+    └── routes.ts
+````
+
+Dentro de la carpeta ``email`` creamos el fichero ``middleware.ts``, donde lo desarrollaremos.
+
+> 👉 Documentación: https://fastify.dev/docs/latest/Reference/Validation-and-Serialization/#validation
+
+Para crear un middleware debemos añadir a la ruta que creamos anteriormente, correspondiente a ``/email``, un ``schema`` donde definir el ``body`` de la request:
+
+````typescript
+
+import {Middleware} from "./middleware";
+
+export const RoutePostEmail = (server: FastifyInstance) => {
+    server.post('/email', {schema: Middleware.FormBody() }, async (request, reply) => {
+        const info = await SendEmail();
+        reply.send({message: 'ok', info})
+    })
+}
+````
+
+Tras definir el nombre de la ruta (``/email``) añadimos un objeto que empiece con ``schema`` y en el que crearemos el ``body``.
+Para tenerlo ordenado y organizado, crearemos este ``schema`` en el fichero ``middleware.ts`` que creamos anteriormente dentro de la carpeta
+`/email`.
+
+````ts
+export const Middleware = {
+    FormBody: FormBody
+};
+
+
+function FormBody(){
+    return {
+        body: {
+            type: 'object',
+            required: ['from, to, subject, text, html'],
+            properties: {
+                from: { type: 'string'},
+                to: { type: 'string'},
+                subject: { type: 'string'},
+                text: { type: 'string'},
+                html: { type: 'string'},
+            }
+        }
+    }
+}
+````
