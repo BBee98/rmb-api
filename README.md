@@ -449,7 +449,6 @@ export const Middleware = {
     FormBody: FormBody
 };
 
-
 function FormBody(){
     return {
         body: {
@@ -466,3 +465,69 @@ function FormBody(){
     }
 }
 ````
+
+Si ahora tratamos de enviar una petición a esta ruta, nos devolverán esta respuesta:
+
+````json
+{
+    "statusCode": 400,
+    "code": "FST_ERR_VALIDATION",
+    "error": "Bad Request",
+    "message": "body must be object"
+}
+````
+
+### 3.2.1 Customizando el error
+
+Como hemos visto anteriormente, Fastify devuelve un error por defecto cuando la validación de la ruta ha fallado (es decir, cuando no hemos añadido en el cuerpo de
+la petición lo necesario para que esta se cumpla). Sin embargo, el error no es muy descriptivo:
+
+```json
+{
+  "message": "body must be object"
+}
+```
+
+Por suerte, Fastify **nos facilita** una manera de **personalizar** nuestros mensajes de error.
+
+> 👉 https://fastify.dev/docs/latest/Reference/Validation-and-Serialization/#error-handling
+
+Si añadimos en la configuración de la ruta la opción de `attachValidation: true`:
+
+```js
+const fastify = Fastify()
+
+fastify.post('/', { schema, attachValidation: true }, function (req, reply) {
+  if (req.validationError) {
+    // `req.validationError.validation` contains the raw validation error
+    reply.code(400).send(req.validationError)
+  }
+})
+```
+
+Podemos comprobar en la ``request`` si la validación falló. En nuestro código: 
+
+````typescript
+export const RoutePostEmail = (server: FastifyInstance) => {
+    server.post('/email', {schema: Middleware.FormBody(), attachValidation: true }, async (request, reply) => {
+        const info = await SendEmail();
+        if (request.validationError) {
+            // `req.validationError.validation` contains the raw validation error
+            reply.code(400).send({
+                message: "Error custom"
+            })
+        }
+        reply.send({message: 'ok', info})
+    })
+}
+````
+
+Si ahora hacemos una petición, esperando que ésta falle:
+
+```json
+{
+  "message": "Error custom"
+}
+```
+
+Veremos que, efectivamente, ésta falla.

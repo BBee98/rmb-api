@@ -3,8 +3,14 @@ import { createTransport } from 'nodemailer';
 import {Middleware} from "./middleware";
 
 export const RoutePostEmail = (server: FastifyInstance) => {
-    server.post('/email', {schema: Middleware.FormBody() }, async (request, reply) => {
+    server.post('/email', {schema: Middleware.FormBody(), attachValidation: true }, async (request, reply) => {
         const info = await SendEmail();
+        if (request.validationError) {
+            // `req.validationError.validation` contains the raw validation error
+            reply.code(400).send({
+                message: "Error custom"
+            })
+        }
         reply.send({message: 'ok', info})
     })
 }

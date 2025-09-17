@@ -10,6 +10,6 @@ function FormBody(){
             type: 'object',
             required: Object.keys(FormTypeProperties),
             properties: FormTypeProperties
-        }
+        },
     }
 }
