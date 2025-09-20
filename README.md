@@ -477,7 +477,35 @@ Si ahora tratamos de enviar una petición a esta ruta, nos devolverán esta resp
 }
 ````
 
-### 3.2.1 Customizando el error
+### 3.2.1 Aplicando Error handling
+
+Existen varias maneras de manejar los errores en ``Fastify``. Una de ellas es **de manera global**, utilizando
+una función concreta de ``fastify`` llamada ``setErrorHandling``:
+
+> 👉Documentación aquí: https://fastify.dev/docs/latest/Reference/Server/#seterrorhandler
+
+``setErrorHandler`` es una función que nos permite llamar a la función que nosotros deseemos **siempre y cuando se produzca un error**.
+
+En este caso, queremos tratar un error de validación de schemas (es decir, que esperamos unos inputs que es posible que no nos lleguen), y sobre esto
+fastify nos recomienda controlar los errores a nivel de schema o de ruta:
+
+> 👉 https://fastify.dev/docs/latest/Reference/Errors/#errors-in-input-data
+
+
+#### Caso 1: Por schema
+
+Para hacer las validaciones y el control de errores por schema, necesitamos instalar el paquete `ajv`:
+
+```bash
+npm install ajv-errors
+```
+
+> Documentación aquí 👉: https://fastify.dev/docs/latest/Reference/Validation-and-Serialization/#schemaerrorformatter
+
+Sin embargo, vamos a escoger hacerlo **por ruta**, que es como nos recomienda ``fastify`` que lo hagamos.
+
+
+#### Caso 2: Por ruta.
 
 Como hemos visto anteriormente, Fastify devuelve un error por defecto cuando la validación de la ruta ha fallado (es decir, cuando no hemos añadido en el cuerpo de
 la petición lo necesario para que esta se cumpla). Sin embargo, el error no es muy descriptivo:
@@ -488,10 +516,6 @@ la petición lo necesario para que esta se cumpla). Sin embargo, el error no es 
 }
 ```
 
-Por suerte, Fastify **nos facilita** una manera de **personalizar** nuestros mensajes de error.
-
-> 👉 https://fastify.dev/docs/latest/Reference/Validation-and-Serialization/#error-handling
-
 Si añadimos en la configuración de la ruta la opción de `attachValidation: true`:
 
 ```js
@@ -499,13 +523,16 @@ const fastify = Fastify()
 
 fastify.post('/', { schema, attachValidation: true }, function (req, reply) {
   if (req.validationError) {
-    // `req.validationError.validation` contains the raw validation error
     reply.code(400).send(req.validationError)
   }
 })
 ```
 
-Podemos comprobar en la ``request`` si la validación falló. En nuestro código: 
+Podemos comprobar en la ``request`` si la validación falló.
+
+> 👉 Busca `attachValidation` https://fastify.dev/docs/latest/Reference/Validation-and-Serialization/#error-handling
+
+Vamos a añadirlo a nuestro código ↓
 
 ````typescript
 export const RoutePostEmail = (server: FastifyInstance) => {
@@ -522,7 +549,7 @@ export const RoutePostEmail = (server: FastifyInstance) => {
 }
 ````
 
-Si ahora hacemos una petición, esperando que ésta falle:
+Y ahora hacemos una petición que falle (es decir, sin enviar los campos requeridos):
 
 ```json
 {
@@ -530,4 +557,159 @@ Si ahora hacemos una petición, esperando que ésta falle:
 }
 ```
 
-Veremos que, efectivamente, ésta falla.
+Con esto hemos comprobado que añadir `attachValidation` a ``true`` e la configuración de nuestra ruta, funciona.
+
+Ahora vamos a organizar un poco mejor el código.
+
+- Primero, vamos a crear un fichero llamado `error-handler` al nivel de la ruta:
+
+````
+src/
+└── core/
+    └── ...
+    └── ...
+└── email/
+    └── error-handler.ts
+    └── middleware.ts
+    └── routes.ts
+````
+
+Crearemos la siguiente función:
+
+````typescript
+import {FastifyReply, FastifyRequest} from "fastify";
+
+export const ErrorHandler = (request: FastifyRequest, reply: FastifyReply) => {
+
+    return {
+        ValidationSchema: () => {
+            return reply.code(400).send({
+                message: "Error custom"
+            })
+        }
+    }
+};
+````
+
+Y ahora vamos a sustituir el código ya escrito para llamar a esta función:
+
+````typescript
+import {FastifyInstance} from "fastify";
+import {Middleware} from "./middleware";
+import {ErrorHandler} from "./error-handler";
+
+export const RoutePostEmail = (server: FastifyInstance) => {
+    server.post('/email', {schema: Middleware.FormBody(), attachValidation: true }, async (request, reply) => {
+        if (request.validationError) {
+            return ErrorHandler(request, reply).ValidationSchema();
+        }
+        const info = await SendEmail();
+        reply.send({message: 'ok', info})
+    })
+}
+````
+
+Primero, vamos a cambiar ligeramente el schema. Vamos a envolver las props dentro de otra prop llamada `email`:
+
+```ts
+export const FormTypeProperties = {
+    email: {
+        type: 'object',
+        required: ['from', 'to', 'subject', 'text', 'html'],
+        properties: {
+            from: {type: 'string'},
+            to: {type: 'string'},
+            subject: {type: 'string'},
+            text: {type: 'string'},
+            html: {type: 'string'},
+        }
+    }
+}
+```
+
+‼️ Ten cuidado. La tendencia sería hacerlo de la siguiente manera:
+
+````ts
+export const FormTypeProperties = {
+    email: {
+        from: {type: 'string'},
+        to: {type: 'string'},
+        subject: {type: 'string'},
+        text: {type: 'string'},
+        html: {type: 'string'},
+    }
+}
+````
+
+Pero esto lanzaría el siguiente error en ``fastify``:
+
+````bash
+FastifyError [Error]: Failed building the validation schema for POST: /v1/email, due to error strict mode: unknown keyword: "from"
+````
+
+Esto es porque la estructura a definir en un schema, **siempre y cuando se trate de un objeto**, debe ser la siguiente:
+
+- Property name (por ejemplo: `email`)
+  └── - Type (por ejemplo: ``type: object``)
+  └── - Required (por ejemplo: ``["from" ]``)
+  └── - Properties (por ejemplo: ``properties: { from: ... }``)
+
+Y vuelta a empezar desde el punto ``Nombre de la property``. 
+
+Así que si tuvieras otro objeto anidado, quedaría así:
+
+- Property name
+  └── - Type
+  └── - Required
+  └── - Properties
+    └── - Property name
+        └── - Type
+        └── - Required
+        └── - Properties...
+
+
+Por suerte, en el ``middleware`` no necesitamos modificar nada.
+
+Por último, vamos a embellecer un poco el mensaje de error:
+
+```typescript
+import {FastifyReply, FastifyRequest} from "fastify";
+import {FormTypeProperties} from "../form/interfaces";
+
+export const ErrorHandler = (request: FastifyRequest, reply: FastifyReply) => {
+
+    return {
+        ValidationSchema: () => {
+            const email = request.body?.email;
+            const validateFields = Object.keys(FormTypeProperties.email.properties);
+            const requestFields = Object.keys(email);
+            const missingFields = validateFields.filter(field => !requestFields?.includes(field));
+
+            const message = `Error. To fulfill the petition the following ${missingFields.length > 1 ? 'fields are' : 'field is'} required: ${missingFields.join(', ')}`
+
+            return reply.code(400).send({
+                message
+            })
+        }
+    }
+};
+```
+
+Así que si ahora hacemos una petición como esta:
+
+```json
+{
+    "email": {
+        "from": "Manuela",
+        "to": "Mi casa"
+    }
+}
+```
+
+Nos devolverá un mensaje de error como este:
+
+```json
+{
+    "message": "Error. To fulfill the petition the following fields are required: subject, text, html"
+}
+```
