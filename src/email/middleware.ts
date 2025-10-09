@@ -5,10 +5,11 @@ export const Middleware = {
 };
 
 function FormBody(){
+    const { html, text, subject, ...requiredFields } = FormTypeProperties.email.properties;
     return {
         body: {
             type: 'object',
-            required: Object.keys(FormTypeProperties),
+            required: ["email"],
             properties: FormTypeProperties
         },
     }

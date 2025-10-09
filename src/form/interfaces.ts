@@ -1,7 +1,7 @@
 export const FormTypeProperties = {
     email: {
         type: 'object',
-        required: ['from', 'to', 'subject', 'text', 'html'],
+        required: ['from', 'to', 'text', 'html'],
         properties: {
             from: {type: 'string'},
             to: {type: 'string'},

@@ -1,12 +1,11 @@
-import {ConfigEnvironment, Serve} from './core/app';
-import {Routes} from './core/routes'
 import * as Handlebars from "handlebars";
 import {template as FormTemplate} from "./form/template";
+import {startServer} from "./core/app";
 
-Routes();
-Serve();
-ConfigEnvironment();
+startServer()
 
 const form = Handlebars.compile(FormTemplate)
+
+
 
 
