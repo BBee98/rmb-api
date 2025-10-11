@@ -1,4 +1,4 @@
-import {FastifyInstance} from "fastify";
+import {FastifyInstance, FastifyRequest} from "fastify";
 import { createTransport } from 'nodemailer';
 import {Middleware} from "./middleware";
 import {ErrorHandler} from "./error-handler";
@@ -8,12 +8,13 @@ export const RoutePostEmail = (server: FastifyInstance) => {
         if (request.validationError) {
             return ErrorHandler(request, reply).ValidationSchema();
         }
-        const info = await SendEmail();
+        const info = await SendEmail(request);
         reply.send({message: 'ok', info})
     })
 }
 
-async function SendEmail(){
+async function SendEmail(request: FastifyRequest){
+    const email = request.body.email;
     const transporter = createTransport({
         host: process.env.HOST,
         port: parseInt(process.env.SECURITY_PORT),
@@ -25,10 +26,10 @@ async function SendEmail(){
     });
 
     return await transporter.sendMail({
-        from: process.env.TEST_EMAIL_FROM,
-        to: process.env.TEST_EMAIL_TO,
-        subject: "Hello ✔",
-        text: "Hello world?", // plain‑text body
-        html: "<b>Hello world?</b>", // HTML body
+        from: email.from,
+        to: email.to,
+        subject: email?.subject || "",
+        text: email.text, // plain‑text body
+        html: email.html, // HTML body
     });
 }

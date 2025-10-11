@@ -6,14 +6,15 @@ export const ErrorHandler = (request: FastifyRequest, reply: FastifyReply) => {
     return {
         ValidationSchema: () => {
             const email = request.body?.email;
+            const validateFields = Object.keys(FormTypeProperties.email.properties);
 
             if(!email) {
                 return reply.code(400).send({
-                    message: 'Error. To fulfill the petition use the correct structure'
+                    message: 'Error. To fulfill the petition use the correct structure',
+                    missingFields: ["email", ...validateFields]
                 })
             }
 
-            const validateFields = Object.keys(FormTypeProperties.email.properties);
             const requestFields = Object.keys(email);
             const missingFields = validateFields.filter(field => !requestFields?.includes(field));
 
